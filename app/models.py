@@ -1,0 +1,98 @@
+from pydantic import BaseModel, Field
+from typing import Literal, Optional
+from datetime import datetime
+
+
+# ============= Request Models =============
+
+class QueryRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=1000)
+    mode: Literal["standard", "crag", "self_reflective", "both"] = "both"
+    top_k: int = Field(default=5, ge=1, le=20)
+
+
+# ============= Response Models =============
+
+class UploadResponse(BaseModel):
+    file_id: str
+    filename: str
+    file_type: str
+    chunks_created: int
+    status: str
+    message: str
+
+
+# ============= Chunk Models =============
+
+class ChunkMetadata(BaseModel):
+    chunk_id: str
+    source_file: str
+    file_type: str
+    page_number: Optional[int] = None
+    chunk_index: int
+    total_chunks: int
+    doc_item_type: Optional[str] = None
+    parent_heading: Optional[str] = None
+    hierarchy_level: Optional[int] = None
+    chunk_method: str = "hybrid"
+    token_count: int
+    char_count: int
+    content_preview: str
+    keywords: list[str] = []
+    created_at: datetime
+    processed_at: datetime
+
+
+class RetrievedChunk(BaseModel):
+    content: str
+    metadata: ChunkMetadata
+    score: float
+
+
+# ============= CRAG Models =============
+
+class CRAGEvaluation(BaseModel):
+    relevance_score: float
+    relevance_label: Literal["relevant", "ambiguous", "irrelevant"]
+    confidence: float
+    evaluation_method: str = "llm_grader"
+    needs_web_search: bool
+    evaluated_at: datetime
+
+
+class CRAGResult(BaseModel):
+    used_web_search: bool
+    evaluation: CRAGEvaluation
+    retrieved_chunks: list[RetrievedChunk]
+    web_results: Optional[list[dict]] = None
+
+
+# ============= Self-Reflective Models =============
+
+class ReflectionResult(BaseModel):
+    answer_grounded: bool
+    hallucination_detected: bool
+    sources_cited: list[str]
+    reflection_score: float
+    needs_regeneration: bool
+    reflection_reason: str
+    reflected_at: datetime
+
+
+class SelfReflectiveResult(BaseModel):
+    final_answer: str
+    iterations: int
+    reflection: ReflectionResult
+    retrieved_chunks: list[RetrievedChunk]
+
+
+# ============= Query Response =============
+
+class QueryResponse(BaseModel):
+    query: str
+    answer: str
+    mode: str
+    sources: list[RetrievedChunk]
+    crag_details: Optional[CRAGResult] = None
+    reflection_details: Optional[SelfReflectiveResult] = None
+    response_time_ms: float
