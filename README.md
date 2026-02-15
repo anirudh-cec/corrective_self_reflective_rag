@@ -12,7 +12,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <p align="center">
-  <i>🎯 Smart Document Retrieval • 🔍 Relevance Evaluation • 🌐 Web Search Fallback • ✨ Answer Validation</i>
+  <i>🎯 Hybrid Vector Search • 🔍 Relevance Evaluation • 🌐 Web Search Fallback • ✨ Answer Validation</i>
 </p>
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API](#-api-endpoints) • [Workflows](#-workflows)
@@ -22,8 +22,9 @@
 ```ascii
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
-║   📚 Upload Documents  →  🔍 Vector Search  →  🤖 LLM Gen    ║
+║   📚 Upload Documents  →  🔍 Hybrid Search  →  🤖 LLM Gen    ║
 ║                                                              ║
+║   ✅ Hybrid Search: Dense + Sparse + RRF Fusion             ║
 ║   ✅ CRAG: Adaptive Web Search Based on Relevance           ║
 ║   ✅ Self-Reflective: Iterative Answer Grounding            ║
 ║   ✅ Both: Combined for Maximum Quality                     ║
@@ -71,14 +72,33 @@
 <td width="50%">
 
 ### 🛠️ **Core Capabilities**
+- 🔍 **Hybrid Search**: Dense + Sparse + RRF
 - 📄 **Multi-format support** (PDF, MD, TXT, JSON)
 - 🧩 **HybridChunker** (Docling integration)
-- 🗄️ **Qdrant vector storage**
+- 🗄️ **Qdrant dual vector storage**
 - 🔧 **Optional HYDE + Reranking**
 
 </td>
 </tr>
 </table>
+
+---
+
+## 🔍 Hybrid Search Modes
+
+This system implements **true hybrid search** using Qdrant's dual vector system:
+
+| Mode | Description | Best For |
+|------|-------------|----------|
+| **🎯 Dense** | Semantic search using OpenAI embeddings | Conceptual queries, synonyms |
+| **📝 Sparse** | BM25 keyword search with IDF weighting | Exact terms, technical jargon |
+| **⚡ Hybrid** | RRF fusion of dense + sparse (default) | Best overall accuracy |
+
+**Key Features:**
+- **Dual Vector Indexing**: Every document gets both dense (1536-dim) and sparse (BM25) vectors
+- **RRF Fusion**: Reciprocal Rank Fusion combines rankings from both search methods
+- **Automatic Tokenization**: 50+ stop words filtered, term frequency analysis
+- **Compatible**: Works with all RAG modes, HYDE, and reranking
 
 ---
 
@@ -145,10 +165,11 @@ graph LR
 
 </div>
 
-### 🎯 Mode Comparison
+### 🎯 RAG Mode Comparison
 
 | Feature | Standard | CRAG | Self-Reflective | Both |
 |---------|----------|------|-----------------|------|
+| **Hybrid Search** | ✅ | ✅ | ✅ | ✅ |
 | **Web Search** | ❌ | ✅ | ❌ | ✅ |
 | **Quality Validation** | ❌ | ❌ | ✅ | ✅ |
 | **Query Refinement** | ❌ | ❌ | ✅ | ✅ |
@@ -197,7 +218,7 @@ curl -X POST "http://localhost:8000/query/" \
 
 **Returns:** Refined Answer + Reflection Score + Iteration Count
 
-### 4️⃣ Query (Both - Recommended)
+### 4️⃣ Query with Hybrid Search (Recommended)
 
 ```bash
 curl -X POST "http://localhost:8000/query/" \
@@ -205,13 +226,19 @@ curl -X POST "http://localhost:8000/query/" \
   -d '{
     "query": "What are the latest AI developments?",
     "mode": "both",
+    "search_mode": "hybrid",
     "top_k": 5,
     "enable_hyde": true,
     "enable_reranking": true
   }'
 ```
 
-**Returns:** Maximum quality answer with CRAG + Self-Reflective validation
+**Returns:** Maximum quality answer with Hybrid Search + CRAG + Self-Reflective
+
+**Search Mode Options:**
+- `"dense"` - Semantic search only
+- `"sparse"` - Keyword search only (BM25)
+- `"hybrid"` - RRF fusion (default, recommended)
 
 ### 5️⃣ Compare All Modes
 
@@ -242,6 +269,11 @@ Key settings in `.env`:
 # 🤖 LLM Configuration
 OPENAI_API_KEY=sk-...
 LLM_MODEL=gpt-4o-mini
+
+# 🔍 Hybrid Search Settings
+HYBRID_SEARCH_ENABLED=true        # Enable hybrid search
+SPARSE_VECTOR_ENABLED=true        # Enable sparse vectors (BM25)
+RRF_K=60                          # RRF fusion parameter
 
 # 📊 CRAG Settings
 CRAG_RELEVANCE_THRESHOLD=0.7      # Relevant if score ≥ 0.7
